@@ -1,0 +1,53 @@
+{% extends 'admin/base.html' %}
+{% block content %}
+  <h2>Fields for {{ service.name }}</h2>
+  {% if error %}<p style="color:red;">{{ error }}</p>{% endif %}
+
+  <h3>Add Field</h3>
+  <form method="post" action="/admin/services/{{ service.id }}/fields/create">
+    <input type="text" name="label" placeholder="Field label" required />
+    <select name="field_type">
+      {% for ft in field_types %}
+        <option value="{{ ft.value }}">{{ ft.value }}</option>
+      {% endfor %}
+    </select>
+    <label><input type="checkbox" name="is_required" checked /> Required</label>
+    <button type="submit">Add</button>
+  </form>
+
+  <h3>Existing Fields</h3>
+  <table border="1" cellpadding="6">
+    <tr><th>ID</th><th>Order</th><th>Label</th><th>Type</th><th>Required</th><th>Actions</th></tr>
+    {% for field in fields %}
+      <tr>
+        <td>{{ field.id }}</td>
+        <td>{{ field.display_order }}</td>
+        <td>{{ field.label }}</td>
+        <td>{{ field.field_type.value }}</td>
+        <td>{{ 'Yes' if field.is_required else 'No' }}</td>
+        <td>
+          <form method="post" action="/admin/services/{{ service.id }}/fields/{{ field.id }}/edit" style="display:inline;">
+            <input type="text" name="label" value="{{ field.label }}" required />
+            <select name="field_type">
+              {% for ft in field_types %}
+                <option value="{{ ft.value }}" {% if ft.value == field.field_type.value %}selected{% endif %}>{{ ft.value }}</option>
+              {% endfor %}
+            </select>
+            <label><input type="checkbox" name="is_required" {% if field.is_required %}checked{% endif %}/> Required</label>
+            <button type="submit">Update</button>
+          </form>
+          <form method="post" action="/admin/services/{{ service.id }}/fields/{{ field.id }}/delete" style="display:inline;">
+            <button type="submit">Delete</button>
+          </form>
+        </td>
+      </tr>
+    {% endfor %}
+  </table>
+
+  <h3>Reorder Fields</h3>
+  <p>Enter comma-separated field IDs in desired order (example: 3,1,2).</p>
+  <form method="post" action="/admin/services/{{ service.id }}/fields/reorder">
+    <input type="text" name="ordered_field_ids" required />
+    <button type="submit">Reorder</button>
+  </form>
+{% endblock %}

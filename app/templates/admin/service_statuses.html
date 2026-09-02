@@ -1,0 +1,39 @@
+{% extends 'admin/base.html' %}
+{% block content %}
+  <h2>Statuses for {{ service.name }}</h2>
+  {% if error %}<p style="color:red;">{{ error }}</p>{% endif %}
+
+  <h3>Add Status</h3>
+  <form method="post" action="/admin/services/{{ service.id }}/statuses/create">
+    <input type="text" name="name" placeholder="Status name" required />
+    <button type="submit">Add</button>
+  </form>
+
+  <h3>Existing Statuses</h3>
+  <table border="1" cellpadding="6">
+    <tr><th>ID</th><th>Order</th><th>Name</th><th>Actions</th></tr>
+    {% for status in statuses %}
+      <tr>
+        <td>{{ status.id }}</td>
+        <td>{{ status.display_order }}</td>
+        <td>{{ status.name }}</td>
+        <td>
+          <form method="post" action="/admin/services/{{ service.id }}/statuses/{{ status.id }}/edit" style="display:inline;">
+            <input type="text" name="name" value="{{ status.name }}" required />
+            <button type="submit">Update</button>
+          </form>
+          <form method="post" action="/admin/services/{{ service.id }}/statuses/{{ status.id }}/delete" style="display:inline;">
+            <button type="submit">Delete</button>
+          </form>
+        </td>
+      </tr>
+    {% endfor %}
+  </table>
+
+  <h3>Reorder Statuses</h3>
+  <p>Enter comma-separated status IDs in desired order (example: 2,1,3).</p>
+  <form method="post" action="/admin/services/{{ service.id }}/statuses/reorder">
+    <input type="text" name="ordered_status_ids" required />
+    <button type="submit">Reorder</button>
+  </form>
+{% endblock %}

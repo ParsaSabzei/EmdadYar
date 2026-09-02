@@ -494,6 +494,37 @@ def cancel_unfinished_request(db: Session, *, request_id: int, chat_id: str) -> 
     return request
 
 
+def get_requests_for_admin(
+    db: Session,
+    *,
+    service_id: int | None = None,
+    status_id: int | None = None,
+) -> list[Request]:
+    statement = select(Request).options(joinedload(Request.service), joinedload(Request.current_status))
+
+    if service_id is not None:
+        statement = statement.where(Request.service_id == service_id)
+
+    if status_id is not None:
+        statement = statement.where(Request.current_status_id == status_id)
+
+    statement = statement.order_by(Request.created_at.desc(), Request.id.desc())
+    return list(db.scalars(statement))
+
+
+def set_request_status(db: Session, *, request_id: int, status_id: int) -> Request:
+    request = _get_request_or_raise(db, request_id)
+    status = _get_status_or_raise(db, status_id)
+
+    if status.service_id != request.service_id:
+        raise ValidationError("Status does not belong to request service")
+
+    request.current_status_id = status.id
+    db.commit()
+    db.refresh(request)
+    return request
+
+
 def get_beneficiary_requests(db: Session, *, chat_id: str) -> list[Request]:
     statement = (
         select(Request)

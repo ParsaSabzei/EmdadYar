@@ -1,0 +1,11 @@
+{% extends 'admin/base.html' %}
+{% block content %}
+  <h2>Dashboard</h2>
+  <ul>
+    <li>Services: {{ stats.services }}</li>
+    <li>Requests: {{ stats.requests }}</li>
+    <li>Submitted requests: {{ stats.submitted }}</li>
+    <li>Unfinished requests: {{ stats.unfinished }}</li>
+    <li>Cancelled requests: {{ stats.cancelled }}</li>
+  </ul>
+{% endblock %}

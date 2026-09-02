@@ -1,0 +1,41 @@
+{% extends 'admin/base.html' %}
+{% block content %}
+  <h2>Services</h2>
+
+  {% if message %}<p style="color: green;">{{ message }}</p>{% endif %}
+  {% if error %}<p style="color: red;">{{ error }}</p>{% endif %}
+
+  <h3>Create Service</h3>
+  <form method="post" action="/admin/services/create">
+    <input type="text" name="name" placeholder="Service name" required />
+    <label>
+      <input type="checkbox" name="is_active" checked /> Active
+    </label>
+    <button type="submit">Create</button>
+  </form>
+
+  <h3>Service List</h3>
+  <table border="1" cellpadding="6">
+    <tr>
+      <th>ID</th>
+      <th>Name</th>
+      <th>Active</th>
+      <th>Actions</th>
+    </tr>
+    {% for service in services %}
+      <tr>
+        <td>{{ service.id }}</td>
+        <td>{{ service.name }}</td>
+        <td>{{ 'Yes' if service.is_active else 'No' }}</td>
+        <td>
+          <a href="/admin/services/{{ service.id }}/edit">Edit</a> |
+          <a href="/admin/services/{{ service.id }}/fields">Fields</a> |
+          <a href="/admin/services/{{ service.id }}/statuses">Statuses</a>
+          <form method="post" action="/admin/services/{{ service.id }}/delete" style="display:inline;">
+            <button type="submit">Delete</button>
+          </form>
+        </td>
+      </tr>
+    {% endfor %}
+  </table>
+{% endblock %}

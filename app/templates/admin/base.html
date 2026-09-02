@@ -1,0 +1,23 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>{{ title or 'Emdadyar Admin' }}</title>
+</head>
+<body>
+  <h1>Emdadyar Admin</h1>
+  {% if admin %}
+    <p>Logged in as: {{ admin.username }}</p>
+    <form method="post" action="/admin/logout">
+      <button type="submit">Logout</button>
+    </form>
+    <p>
+      <a href="/admin">Dashboard</a> |
+      <a href="/admin/services">Services</a> |
+      <a href="/admin/requests">Requests</a>
+    </p>
+  {% endif %}
+  <hr />
+  {% block content %}{% endblock %}
+</body>
+</html>

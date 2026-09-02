@@ -1,0 +1,45 @@
+{% extends 'admin/base.html' %}
+{% block content %}
+  <h2>Request Details</h2>
+
+  {% if message %}<p style="color:green;">{{ message }}</p>{% endif %}
+  {% if error %}<p style="color:red;">{{ error }}</p>{% endif %}
+
+  <p><strong>Service:</strong> {{ request_item.service.name }}</p>
+  <p><strong>Tracking Code:</strong> {{ request_item.tracking_code or 'UNFINISHED' }}</p>
+  <p><strong>Chat ID:</strong> {{ request_item.chat_id }}</p>
+  <p><strong>Status:</strong> {{ request_item.current_status.name if request_item.current_status else request_item.state.value }}</p>
+  <p><strong>Created:</strong> {{ request_item.created_at }}</p>
+
+  <h3>Change Status</h3>
+  <form method="post" action="/admin/requests/{{ request_item.id }}/status">
+    <select name="status_id">
+      {% for status in statuses %}
+        <option value="{{ status.id }}" {% if request_item.current_status_id == status.id %}selected{% endif %}>{{ status.name }}</option>
+      {% endfor %}
+    </select>
+    <button type="submit">Update Status</button>
+  </form>
+
+  <h3>Answers</h3>
+  <ul>
+    {% for answer in request_item.answers %}
+      <li>
+        <strong>{{ answer.field_label_snapshot }}:</strong>
+        {% if answer.field_type_snapshot.value == 'TEXT' %}
+          {{ answer.value_text }}
+        {% elif answer.field_type_snapshot.value == 'NUMBER' %}
+          {{ answer.value_number }}
+        {% else %}
+          file_path={{ answer.file_path }} {% if answer.original_filename %}(original={{ answer.original_filename }}){% endif %}
+        {% endif %}
+      </li>
+    {% endfor %}
+  </ul>
+
+  <h3>Send Message to Beneficiary</h3>
+  <form method="post" action="/admin/requests/{{ request_item.id }}/message">
+    <textarea name="message_text" rows="4" cols="50" required></textarea><br />
+    <button type="submit">Send</button>
+  </form>
+{% endblock %}

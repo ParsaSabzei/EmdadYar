@@ -1,0 +1,45 @@
+{% extends 'admin/base.html' %}
+{% block content %}
+  <h2>Requests</h2>
+
+  <form method="get" action="/admin/requests">
+    <label>Service:</label>
+    <select name="service_id">
+      <option value="">All</option>
+      {% for service in services %}
+        <option value="{{ service.id }}" {% if selected_service_id == service.id %}selected{% endif %}>{{ service.name }}</option>
+      {% endfor %}
+    </select>
+
+    <label>Status:</label>
+    <select name="status_id">
+      <option value="">All</option>
+      {% for status in statuses %}
+        <option value="{{ status.id }}" {% if selected_status_id == status.id %}selected{% endif %}>{{ status.name }}</option>
+      {% endfor %}
+    </select>
+
+    <button type="submit">Filter</button>
+  </form>
+
+  <table border="1" cellpadding="6">
+    <tr>
+      <th>Tracking Code</th>
+      <th>Service</th>
+      <th>Chat ID</th>
+      <th>Status</th>
+      <th>Created</th>
+      <th>Details</th>
+    </tr>
+    {% for item in requests %}
+      <tr>
+        <td>{{ item.tracking_code or 'UNFINISHED' }}</td>
+        <td>{{ item.service.name }}</td>
+        <td>{{ item.chat_id }}</td>
+        <td>{{ item.current_status.name if item.current_status else item.state.value }}</td>
+        <td>{{ item.created_at }}</td>
+        <td><a href="/admin/requests/{{ item.id }}">View</a></td>
+      </tr>
+    {% endfor %}
+  </table>
+{% endblock %}
