@@ -1,5 +1,6 @@
 from app.models.core import (
     Admin,
+    ConversationState,
     FieldType,
     Request,
     RequestAnswer,
@@ -11,6 +12,7 @@ from app.models.core import (
 
 __all__ = [
     "Admin",
+    "ConversationState",
     "FieldType",
     "Request",
     "RequestAnswer",

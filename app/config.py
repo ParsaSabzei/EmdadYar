@@ -20,6 +20,7 @@ class Settings:
     database_url: str
     initial_admin_username: str | None
     initial_admin_password: str | None
+    bale_bot_token: str | None
 
 
 @lru_cache
@@ -33,6 +34,7 @@ def get_settings() -> Settings:
         database_url=os.getenv("DATABASE_URL", "sqlite:///./emdadyar.db"),
         initial_admin_username=os.getenv("INITIAL_ADMIN_USERNAME"),
         initial_admin_password=os.getenv("INITIAL_ADMIN_PASSWORD"),
+        bale_bot_token=os.getenv("BALE_BOT_TOKEN"),
     )
 
 

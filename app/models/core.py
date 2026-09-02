@@ -65,6 +65,7 @@ class ServiceField(Base):
 
     service: Mapped["Service"] = relationship(back_populates="fields")
     answers: Mapped[list["RequestAnswer"]] = relationship(back_populates="service_field")
+    conversation_states: Mapped[list["ConversationState"]] = relationship(back_populates="current_field")
 
 
 class ServiceStatus(Base):
@@ -102,6 +103,7 @@ class Request(Base):
     service: Mapped["Service"] = relationship(back_populates="requests")
     current_status: Mapped["ServiceStatus | None"] = relationship(back_populates="requests")
     answers: Mapped[list["RequestAnswer"]] = relationship(back_populates="request", cascade="all, delete-orphan")
+    conversation_states: Mapped[list["ConversationState"]] = relationship(back_populates="request")
 
 
 class RequestAnswer(Base):
@@ -120,3 +122,20 @@ class RequestAnswer(Base):
 
     request: Mapped["Request"] = relationship(back_populates="answers")
     service_field: Mapped["ServiceField | None"] = relationship(back_populates="answers")
+
+
+class ConversationState(Base):
+    __tablename__ = "conversation_states"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    chat_id: Mapped[str] = mapped_column(String(128), unique=True, index=True)
+    request_id: Mapped[int | None] = mapped_column(ForeignKey("requests.id", ondelete="SET NULL"), nullable=True, index=True)
+    current_field_id: Mapped[int | None] = mapped_column(ForeignKey("service_fields.id", ondelete="SET NULL"), nullable=True, index=True)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+    )
+
+    request: Mapped["Request | None"] = relationship(back_populates="conversation_states")
+    current_field: Mapped["ServiceField | None"] = relationship(back_populates="conversation_states")
