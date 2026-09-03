@@ -116,25 +116,24 @@ def save_field_answer_from_text(
     raise ValidationError("This field expects a file")
 
 
-def save_field_answer_from_file(
+def save_field_answer_from_file_path(
     db: Session,
     *,
     request_id: int,
     chat_id: str,
     field: ServiceField,
-    file_id: str,
+    stored_file_path: str,
     original_filename: str | None,
 ) -> RequestAnswer:
     if field.field_type != FieldType.FILE:
         raise ValidationError("This field expects text or number input")
 
-    synthetic_path = f"bale-file://{file_id}"
     return save_request_answer(
         db,
         request_id=request_id,
         chat_id=chat_id,
         service_field_id=field.id,
-        file_path=synthetic_path,
+        file_path=stored_file_path,
         original_filename=original_filename,
     )
 

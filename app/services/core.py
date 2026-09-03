@@ -1,11 +1,11 @@
 import random
-import string
 
-from sqlalchemy import func, select
+from sqlalchemy import String, and_, cast, func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload, selectinload
 
 from app.models import FieldType, Request, RequestAnswer, RequestState, Service, ServiceField, ServiceStatus
+from app.services.file_storage import delete_request_files
 
 
 class BusinessRuleError(Exception):
@@ -499,8 +499,15 @@ def get_requests_for_admin(
     *,
     service_id: int | None = None,
     status_id: int | None = None,
+    search_name: str | None = None,
+    search_national_id: str | None = None,
+    search_tracking_code: str | None = None,
 ) -> list[Request]:
-    statement = select(Request).options(joinedload(Request.service), joinedload(Request.current_status))
+    statement = select(Request).distinct().options(
+        joinedload(Request.service),
+        joinedload(Request.current_status),
+        selectinload(Request.answers),
+    )
 
     if service_id is not None:
         statement = statement.where(Request.service_id == service_id)
@@ -508,8 +515,42 @@ def get_requests_for_admin(
     if status_id is not None:
         statement = statement.where(Request.current_status_id == status_id)
 
+    if search_tracking_code and search_tracking_code.strip():
+        pattern = f"%{search_tracking_code.strip().lower()}%"
+        statement = statement.where(func.lower(Request.tracking_code).like(pattern))
+
+    if search_name and search_name.strip():
+        pattern = f"%{search_name.strip().lower()}%"
+        request_ids_for_name = select(RequestAnswer.request_id).where(
+            and_(
+                RequestAnswer.field_type_snapshot == FieldType.TEXT,
+                func.lower(RequestAnswer.value_text).like(pattern),
+            )
+        )
+        statement = statement.where(Request.id.in_(request_ids_for_name))
+
+    if search_national_id and search_national_id.strip():
+        pattern = f"%{search_national_id.strip()}%"
+        request_ids_for_nid = select(RequestAnswer.request_id).where(
+            or_(
+                cast(RequestAnswer.value_number, String).like(pattern),
+                RequestAnswer.value_text.like(pattern),
+            )
+        )
+        statement = statement.where(Request.id.in_(request_ids_for_nid))
+
     statement = statement.order_by(Request.created_at.desc(), Request.id.desc())
     return list(db.scalars(statement))
+
+
+def delete_request_permanently(db: Session, *, request_id: int) -> None:
+    request = _get_request_or_raise(db, request_id)
+
+    file_paths = [answer.file_path for answer in request.answers if answer.file_path]
+    delete_request_files([path for path in file_paths if path is not None])
+
+    db.delete(request)
+    db.commit()
 
 
 def set_request_status(db: Session, *, request_id: int, status_id: int) -> Request:

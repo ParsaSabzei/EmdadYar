@@ -7,7 +7,7 @@ from app.database import configure_database, init_db
 
 def create_bot():
     try:
-        asyncio.get_event_loop()
+        _ = asyncio.get_event_loop()
     except RuntimeError:
         asyncio.set_event_loop(asyncio.new_event_loop())
 
@@ -34,10 +34,12 @@ def run_bot() -> None:
     settings = get_settings()
     configure_database(settings.database_url)
     init_db()
-    ensure_initial_admin()
+    created = ensure_initial_admin()
+    _ = created
 
     bot = create_bot()
-    if hasattr(bot, "run_polling"):
-        bot.run_polling()
+    run_polling = getattr(bot, "run_polling", None)
+    if callable(run_polling):
+        run_polling()
     else:
         bot.run()

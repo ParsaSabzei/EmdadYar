@@ -7,6 +7,7 @@ from typing import Any
 from sqlalchemy.orm import Session
 
 from app.bale import keyboards, states
+from app.bale.files import download_and_store_bale_file
 from app.database import get_session_factory
 from app.models import FieldType, RequestState
 from app.services.bot_flow import (
@@ -19,12 +20,14 @@ from app.services.bot_flow import (
     get_request_details_for_chat,
     list_active_services,
     list_beneficiary_requests,
-    save_field_answer_from_file,
+    save_field_answer_from_file_path,
     save_field_answer_from_text,
     set_conversation_state,
     start_or_get_unfinished_request,
     submit_current_request_if_complete,
 )
+from app.services.file_storage import FileStorageError
+from app.utils.jalali import format_jalali_datetime
 
 _SERVICE_BUTTON_PATTERN = re.compile(r"^Service\s+(\d+)\s+-\s+.+$")
 _REQUEST_BUTTON_PATTERN = re.compile(r"^Request\s+(\d+)\s+-\s+.+$")
@@ -49,7 +52,7 @@ def _extract_text(message: Any) -> str | None:
     return str(text).strip()
 
 
-def _extract_file_metadata(message: Any) -> tuple[str, str | None] | None:
+def _extract_file_metadata(message: Any) -> tuple[str, str | None, str | None, int | None] | None:
     for attr_name in ("document", "file"):
         obj = getattr(message, attr_name, None)
         if obj is None:
@@ -57,8 +60,20 @@ def _extract_file_metadata(message: Any) -> tuple[str, str | None] | None:
 
         file_id = getattr(obj, "file_id", None) or getattr(obj, "id", None) or getattr(obj, "unique_id", None)
         file_name = getattr(obj, "file_name", None) or getattr(obj, "name", None)
+        mime_type = getattr(obj, "mime_type", None)
+        size = getattr(obj, "file_size", None) or getattr(obj, "size", None)
         if file_id:
-            return str(file_id), str(file_name) if file_name else None
+            normalized_size = int(size) if isinstance(size, (int, float)) or (isinstance(size, str) and size.isdigit()) else None
+            return str(file_id), str(file_name) if file_name else None, str(mime_type) if mime_type else None, normalized_size
+
+    photos = getattr(message, "photo", None)
+    if photos and isinstance(photos, list):
+        photo = photos[-1]
+        file_id = getattr(photo, "file_id", None) or getattr(photo, "id", None)
+        size = getattr(photo, "file_size", None) or getattr(photo, "size", None)
+        if file_id:
+            normalized_size = int(size) if isinstance(size, (int, float)) or (isinstance(size, str) and size.isdigit()) else None
+            return str(file_id), None, "image/jpeg", normalized_size
 
     return None
 
@@ -87,7 +102,7 @@ def _field_prompt(field) -> str:
 def _format_request_row(request) -> str:
     status = request.current_status.name if request.current_status else request.state.value
     tracking = request.tracking_code or "UNFINISHED"
-    created = request.created_at.strftime("%Y-%m-%d %H:%M") if isinstance(request.created_at, datetime) else str(request.created_at)
+    created = format_jalali_datetime(request.created_at) if isinstance(request.created_at, datetime) else str(request.created_at)
     return f"{created} | {request.service.name} | {tracking} | {status}"
 
 
@@ -222,14 +237,21 @@ async def _handle_field_answer(db: Session, message: Any, chat_id: str, text: st
                 await _reply(message, "Please send a file for this question.", keyboards.unfinished_request_rows())
                 return
 
-            file_id, original_filename = file_meta
-            save_field_answer_from_file(
+            file_id, original_filename, mime_type, declared_size = file_meta
+            stored = await download_and_store_bale_file(
+                request_id=request.id,
+                file_id=file_id,
+                original_filename=original_filename,
+                mime_type=mime_type,
+                declared_size=declared_size,
+            )
+            save_field_answer_from_file_path(
                 db,
                 request_id=request.id,
                 chat_id=chat_id,
                 field=field,
-                file_id=file_id,
-                original_filename=original_filename,
+                stored_file_path=stored.stored_path,
+                original_filename=stored.original_filename,
             )
         else:
             if not text:
@@ -245,7 +267,7 @@ async def _handle_field_answer(db: Session, message: Any, chat_id: str, text: st
             )
 
         await _prompt_next_field_or_submit(db, message, chat_id, request.id)
-    except ValidationError as exc:
+    except (ValidationError, FileStorageError) as exc:
         await _reply(message, str(exc), keyboards.unfinished_request_rows())
     except BusinessRuleError as exc:
         clear_conversation_state(db, chat_id=chat_id)

@@ -2,6 +2,9 @@
 {% block content %}
   <h2>Requests</h2>
 
+  {% if message %}<p style="color:green;">{{ message }}</p>{% endif %}
+  {% if error %}<p style="color:red;">{{ error }}</p>{% endif %}
+
   <form method="get" action="/admin/requests">
     <label>Service:</label>
     <select name="service_id">
@@ -19,13 +22,23 @@
       {% endfor %}
     </select>
 
-    <button type="submit">Filter</button>
+    <label>Name:</label>
+    <input type="text" name="search_name" value="{{ search_name }}" />
+
+    <label>National ID:</label>
+    <input type="text" name="search_national_id" value="{{ search_national_id }}" />
+
+    <label>Tracking Code:</label>
+    <input type="text" name="search_tracking_code" value="{{ search_tracking_code }}" />
+
+    <button type="submit">Search / Filter</button>
   </form>
 
   <table border="1" cellpadding="6">
     <tr>
       <th>Tracking Code</th>
       <th>Service</th>
+      <th>Beneficiary Name</th>
       <th>Chat ID</th>
       <th>Status</th>
       <th>Created</th>
@@ -35,9 +48,10 @@
       <tr>
         <td>{{ item.tracking_code or 'UNFINISHED' }}</td>
         <td>{{ item.service.name }}</td>
+        <td>{{ beneficiary_names.get(item.id, '-') }}</td>
         <td>{{ item.chat_id }}</td>
         <td>{{ item.current_status.name if item.current_status else item.state.value }}</td>
-        <td>{{ item.created_at }}</td>
+        <td>{{ item.created_at|jalali }}</td>
         <td><a href="/admin/requests/{{ item.id }}">View</a></td>
       </tr>
     {% endfor %}

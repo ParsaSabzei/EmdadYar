@@ -5,6 +5,7 @@ from sqlalchemy import select
 
 from app.bale import keyboards, states
 from app.bale.handlers import process_message
+from app.services.file_storage import StoredFile
 from app.database import configure_database, drop_db, get_session_factory, init_db
 from app.models import ConversationState, FieldType, Request, RequestAnswer, RequestState
 from app.services.core import add_service_field, add_service_status, create_service
@@ -26,7 +27,7 @@ class FakeMessage:
         self.chat = FakeChat(chat_id)
         self.text = text
         self.document = document
-        self.replies: list[tuple[str, tuple]] = []
+        self.replies: list[tuple[str, tuple[object, ...]]] = []
 
     async def reply(self, text: str, *args) -> None:
         self.replies.append((text, args))
@@ -89,7 +90,7 @@ def test_unfinished_request_detection(tmp_path: Path) -> None:
         assert "already have an unfinished request" in msg2.replies[-1][0]
 
 
-def test_field_progression_and_answer_saving_and_submission(tmp_path: Path) -> None:
+def test_field_progression_and_answer_saving_and_submission(tmp_path: Path, monkeypatch) -> None:
     _setup_db(tmp_path)
     session_factory = get_session_factory()
     with session_factory() as db:
@@ -98,6 +99,16 @@ def test_field_progression_and_answer_saving_and_submission(tmp_path: Path) -> N
         number_field = add_service_field(db, service.id, label="Income", field_type=FieldType.NUMBER)
         file_field = add_service_field(db, service.id, label="Document", field_type=FieldType.FILE)
         status = add_service_status(db, service.id, name="Received")
+
+        async def fake_download_and_store_bale_file(**kwargs):
+            return StoredFile(
+                stored_path=f"uploads/requests/{kwargs['request_id']}/stored.pdf",
+                original_filename=kwargs.get("original_filename") or "doc.pdf",
+                extension="pdf",
+                size=1024,
+            )
+
+        monkeypatch.setattr("app.bale.handlers.download_and_store_bale_file", fake_download_and_store_bale_file)
 
         _run(process_message(db, FakeMessage(chat_id="333", text=f"Service {service.id} - {service.name}")))
 
@@ -123,7 +134,7 @@ def test_field_progression_and_answer_saving_and_submission(tmp_path: Path) -> N
         assert len(answers) == 3
         assert any(a.service_field_id == name_field.id and a.value_text == "Parsa" for a in answers)
         assert any(a.service_field_id == number_field.id and a.value_number == 2500 for a in answers)
-        assert any(a.service_field_id == file_field.id and a.file_path == "bale-file://f1" for a in answers)
+        assert any(a.service_field_id == file_field.id and "/requests/" in (a.file_path or "") for a in answers)
 
 
 def test_number_validation_error(tmp_path: Path) -> None:
@@ -173,6 +184,7 @@ def test_my_requests_and_request_details(tmp_path: Path) -> None:
         assert "Your requests" in requests_msg.replies[-1][0]
 
         request = db.scalar(select(Request).where(Request.chat_id == "666"))
+        assert request is not None
         details_msg = FakeMessage(chat_id="666", text=f"Request {request.id} - {request.tracking_code}")
         _run(process_message(db, details_msg))
 
