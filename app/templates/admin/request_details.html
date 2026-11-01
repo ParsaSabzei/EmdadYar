@@ -1,56 +1,92 @@
 {% extends 'admin/base.html' %}
+
+{% block title %}جزئیات درخواست | امدادیار{% endblock %}
+{% block page_title %}جزئیات درخواست{% endblock %}
+{% block page_subtitle %}بررسی کامل اطلاعات و پاسخ‌های متقاضی{% endblock %}
+
 {% block content %}
-  <h2>Request Details</h2>
+  {% if message %}<div class="alert alert-success">✓ {{ message }}</div>{% endif %}
+  {% if error %}<div class="alert alert-error">⚠ {{ error }}</div>{% endif %}
 
-  {% if message %}<p style="color:green;">{{ message }}</p>{% endif %}
-  {% if error %}<p style="color:red;">{{ error }}</p>{% endif %}
+  <section class="card">
+    {% set status_text = request_item.current_status.name if request_item.current_status else request_item.state.value %}
+    <h3>کد پیگیری: {{ request_item.tracking_code or 'UNFINISHED' }}</h3>
+    <div class="kv" style="margin-top: 12px;">
+      <div class="kv-item"><div class="k">خدمت</div><div class="v">{{ request_item.service.name }}</div></div>
+      <div class="kv-item"><div class="k">تاریخ ایجاد</div><div class="v">{{ request_item.created_at|jalali }}</div></div>
+      <div class="kv-item"><div class="k">وضعیت فعلی</div><div class="v"><span class="badge">{{ status_text }}</span></div></div>
+      <div class="kv-item"><div class="k">State</div><div class="v">{{ request_item.state.value }}</div></div>
+      <div class="kv-item"><div class="k">Chat ID</div><div class="v">{{ request_item.chat_id }}</div></div>
+    </div>
+  </section>
 
-  <p><strong>Service:</strong> {{ request_item.service.name }}</p>
-  <p><strong>Tracking Code:</strong> {{ request_item.tracking_code or 'UNFINISHED' }}</p>
-  <p><strong>Chat ID:</strong> {{ request_item.chat_id }}</p>
-  <p><strong>State:</strong> {{ request_item.state.value }}</p>
-  <p><strong>Status:</strong> {{ request_item.current_status.name if request_item.current_status else request_item.state.value }}</p>
-  <p><strong>Created:</strong> {{ request_item.created_at|jalali }}</p>
+  <section class="card">
+    <h3>پاسخ‌ها</h3>
+    {% if request_item.answers %}
+      <div class="qa-list">
+        {% for answer in request_item.answers %}
+          <article class="qa-item">
+            <div class="qa-question">{{ answer.field_label_snapshot }}</div>
+            <div class="qa-answer">
+              {% if answer.field_type_snapshot.value == 'TEXT' %}
+                {{ answer.value_text or '-' }}
+              {% elif answer.field_type_snapshot.value == 'NUMBER' %}
+                {{ answer.value_number if answer.value_number is not none else '-' }}
+              {% else %}
+                {% if answer.file_path %}
+                  <div style="display:flex; flex-wrap:wrap; gap:10px; align-items:center;">
+                    <span>📄 {{ answer.original_filename or 'file' }}</span>
+                    <a class="btn btn-secondary" href="/admin/requests/{{ request_item.id }}/files/{{ answer.id }}">مشاهده / دانلود</a>
+                  </div>
+                {% else %}
+                  -
+                {% endif %}
+              {% endif %}
+            </div>
+          </article>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="empty">پاسخی برای این درخواست ثبت نشده است.</div>
+    {% endif %}
+  </section>
 
-  <h3>Change Status</h3>
-  <form method="post" action="/admin/requests/{{ request_item.id }}/status">
-    <select name="status_id">
-      {% for status in statuses %}
-        <option value="{{ status.id }}" {% if request_item.current_status_id == status.id %}selected{% endif %}>{{ status.name }}</option>
-      {% endfor %}
-    </select>
-    <button type="submit">Update Status</button>
-  </form>
+  <section class="grid cols-2">
+    <article class="card">
+      <h3>تغییر وضعیت</h3>
+      <form method="post" action="/admin/requests/{{ request_item.id }}/status" class="actions">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
+        <select name="status_id" style="max-width: 280px;">
+          {% for status in statuses %}
+            <option value="{{ status.id }}" {% if request_item.current_status_id == status.id %}selected{% endif %}>{{ status.name }}</option>
+          {% endfor %}
+        </select>
+        <button class="btn btn-primary" type="submit">ثبت وضعیت</button>
+      </form>
+    </article>
 
-  <h3>Answers</h3>
-  <ul>
-    {% for answer in request_item.answers %}
-      <li>
-        <strong>{{ answer.field_label_snapshot }}:</strong>
-        {% if answer.field_type_snapshot.value == 'TEXT' %}
-          {{ answer.value_text }}
-        {% elif answer.field_type_snapshot.value == 'NUMBER' %}
-          {{ answer.value_number }}
-        {% else %}
-          {% if answer.file_path %}
-            {{ answer.original_filename or 'file' }}
-            (<a href="/admin/requests/{{ request_item.id }}/files/{{ answer.id }}">Download</a>)
-          {% else %}
-            -
-          {% endif %}
-        {% endif %}
-      </li>
-    {% endfor %}
-  </ul>
+    <article class="card">
+      <h3>ارسال پیام به متقاضی</h3>
+      <p class="muted">این پیام از طریق Bale ارسال می‌شود.</p>
+      <form method="post" action="/admin/requests/{{ request_item.id }}/message" class="grid">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
+        <div class="field">
+          <label for="message_text">متن پیام *</label>
+          <textarea id="message_text" name="message_text" required></textarea>
+        </div>
+        <div>
+          <button class="btn btn-primary" type="submit">ارسال پیام</button>
+        </div>
+      </form>
+    </article>
+  </section>
 
-  <h3>Send Message to Beneficiary</h3>
-  <form method="post" action="/admin/requests/{{ request_item.id }}/message">
-    <textarea name="message_text" rows="4" cols="50" required></textarea><br />
-    <button type="submit">Send</button>
-  </form>
-
-  <h3>Delete Request</h3>
-  <form method="post" action="/admin/requests/{{ request_item.id }}/delete">
-    <button type="submit">Delete Request Permanently</button>
-  </form>
+  <section class="card">
+    <h3>حذف درخواست</h3>
+    <p class="muted">این عملیات غیرقابل بازگشت است و فایل‌های مربوط به این درخواست نیز حذف می‌شوند.</p>
+    <form method="post" action="/admin/requests/{{ request_item.id }}/delete" onsubmit="return confirm('آیا از حذف دائمی این درخواست مطمئن هستید؟');">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
+      <button class="btn btn-danger" type="submit">حذف دائمی درخواست</button>
+    </form>
+  </section>
 {% endblock %}

@@ -93,10 +93,10 @@ async def _reply(message: Any, text: str, rows: list[list[str]] | None = None) -
 
 def _field_prompt(field) -> str:
     if field.field_type == FieldType.TEXT:
-        return f"{field.label}\n(Please send text)"
+        return f"{field.label}\n(لطفا تایپ کنید و ارسال کنید)"
     if field.field_type == FieldType.NUMBER:
-        return f"{field.label}\n(Please send a number)"
-    return f"{field.label}\n(Please send one file/document)"
+        return f"{field.label}\n(لطفا تایپ کنید و ارسال کنید)"
+    return f"{field.label}\n(لطفا فایل مورد نظر خود را ارسال کنید)"
 
 
 def _format_request_row(request) -> str:
@@ -135,7 +135,7 @@ async def _show_start_menu(db: Session, message: Any, chat_id: str) -> None:
         return
 
     service_lines = "\n".join([f"- {service.name}" for service in services])
-    text = f"Welcome. Please choose a service:\n{service_lines}"
+    text = "خوش آمدید، لطفا گزینه مدنظر خود را انتخاب کنید:"+f"\n{service_lines}"
     await _reply(message, text, keyboards.services_rows(services))
 
 

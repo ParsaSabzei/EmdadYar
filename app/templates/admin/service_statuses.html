@@ -1,39 +1,70 @@
 {% extends 'admin/base.html' %}
+
+{% block title %}وضعیت‌های خدمت | امدادیار{% endblock %}
+{% block page_title %}وضعیت‌های خدمت: {{ service.name }}{% endblock %}
+{% block page_subtitle %}مدیریت وضعیت‌ها با ترتیب نمایش{% endblock %}
+
 {% block content %}
-  <h2>Statuses for {{ service.name }}</h2>
-  {% if error %}<p style="color:red;">{{ error }}</p>{% endif %}
+  {% if error %}<div class="alert alert-error">⚠ {{ error }}</div>{% endif %}
 
-  <h3>Add Status</h3>
-  <form method="post" action="/admin/services/{{ service.id }}/statuses/create">
-    <input type="text" name="name" placeholder="Status name" required />
-    <button type="submit">Add</button>
-  </form>
+  <section class="card">
+    <h3>افزودن وضعیت</h3>
+    <form method="post" action="/admin/services/{{ service.id }}/statuses/create" class="actions">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
+      <input style="max-width: 360px;" type="text" name="name" placeholder="نام وضعیت" required />
+      <button class="btn btn-primary" type="submit">افزودن</button>
+    </form>
+  </section>
 
-  <h3>Existing Statuses</h3>
-  <table border="1" cellpadding="6">
-    <tr><th>ID</th><th>Order</th><th>Name</th><th>Actions</th></tr>
-    {% for status in statuses %}
-      <tr>
-        <td>{{ status.id }}</td>
-        <td>{{ status.display_order }}</td>
-        <td>{{ status.name }}</td>
-        <td>
-          <form method="post" action="/admin/services/{{ service.id }}/statuses/{{ status.id }}/edit" style="display:inline;">
-            <input type="text" name="name" value="{{ status.name }}" required />
-            <button type="submit">Update</button>
-          </form>
-          <form method="post" action="/admin/services/{{ service.id }}/statuses/{{ status.id }}/delete" style="display:inline;">
-            <button type="submit">Delete</button>
-          </form>
-        </td>
-      </tr>
-    {% endfor %}
-  </table>
+  <section class="card">
+    <h3>فهرست وضعیت‌ها</h3>
+    {% if statuses %}
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>ترتیب</th>
+              <th>نام</th>
+              <th>عملیات</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for status in statuses %}
+              <tr>
+                <td>{{ status.id }}</td>
+                <td>{{ status.display_order }}</td>
+                <td><span class="badge">{{ status.name }}</span></td>
+                <td>
+                  <div class="actions">
+                    <form class="inline-form" method="post" action="/admin/services/{{ service.id }}/statuses/{{ status.id }}/edit">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
+                      <input style="max-width: 220px;" type="text" name="name" value="{{ status.name }}" required />
+                      <button class="btn btn-secondary" type="submit">ویرایش</button>
+                    </form>
+                    <form class="inline-form" method="post" action="/admin/services/{{ service.id }}/statuses/{{ status.id }}/delete" onsubmit="return confirm('آیا از حذف این وضعیت مطمئن هستید؟');">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
+                      <button class="btn btn-danger" type="submit">حذف</button>
+                    </form>
+                  </div>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="empty">هنوز وضعیتی برای این خدمت تعریف نشده است.</div>
+    {% endif %}
+  </section>
 
-  <h3>Reorder Statuses</h3>
-  <p>Enter comma-separated status IDs in desired order (example: 2,1,3).</p>
-  <form method="post" action="/admin/services/{{ service.id }}/statuses/reorder">
-    <input type="text" name="ordered_status_ids" required />
-    <button type="submit">Reorder</button>
-  </form>
+  <section class="card">
+    <h3>تغییر ترتیب وضعیت‌ها</h3>
+    <p class="muted">شناسه وضعیت‌ها را با ویرگول به ترتیب وارد کنید. مثال: 2,1,3</p>
+    <form method="post" action="/admin/services/{{ service.id }}/statuses/reorder" class="actions">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
+      <input style="max-width: 320px;" type="text" name="ordered_status_ids" required />
+      <button class="btn btn-primary" type="submit">ذخیره ترتیب</button>
+    </form>
+  </section>
 {% endblock %}

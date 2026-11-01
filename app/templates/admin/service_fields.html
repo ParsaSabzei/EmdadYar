@@ -1,53 +1,96 @@
 {% extends 'admin/base.html' %}
+
+{% block title %}فیلدهای خدمت | امدادیار{% endblock %}
+{% block page_title %}فیلدهای خدمت: {{ service.name }}{% endblock %}
+{% block page_subtitle %}مدیریت سوالات پویا با ترتیب نمایش{% endblock %}
+
 {% block content %}
-  <h2>Fields for {{ service.name }}</h2>
-  {% if error %}<p style="color:red;">{{ error }}</p>{% endif %}
+  {% if error %}<div class="alert alert-error">⚠ {{ error }}</div>{% endif %}
 
-  <h3>Add Field</h3>
-  <form method="post" action="/admin/services/{{ service.id }}/fields/create">
-    <input type="text" name="label" placeholder="Field label" required />
-    <select name="field_type">
-      {% for ft in field_types %}
-        <option value="{{ ft.value }}">{{ ft.value }}</option>
-      {% endfor %}
-    </select>
-    <label><input type="checkbox" name="is_required" checked /> Required</label>
-    <button type="submit">Add</button>
-  </form>
+  <section class="card">
+    <h3>افزودن فیلد جدید</h3>
+    <form method="post" action="/admin/services/{{ service.id }}/fields/create" class="form-grid">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
+      <div class="field">
+        <label for="label">متن سوال/برچسب *</label>
+        <input id="label" type="text" name="label" required placeholder="مثلاً نام و نام خانوادگی" />
+      </div>
+      <div class="field">
+        <label for="field_type">نوع فیلد *</label>
+        <select id="field_type" name="field_type">
+          {% for ft in field_types %}
+            <option value="{{ ft.value }}">{{ ft.value }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="field">
+        <label class="checkbox-row"><input type="checkbox" name="is_required" checked /> ضروری</label>
+      </div>
+      <div>
+        <button class="btn btn-primary" type="submit">افزودن فیلد</button>
+      </div>
+    </form>
+  </section>
 
-  <h3>Existing Fields</h3>
-  <table border="1" cellpadding="6">
-    <tr><th>ID</th><th>Order</th><th>Label</th><th>Type</th><th>Required</th><th>Actions</th></tr>
-    {% for field in fields %}
-      <tr>
-        <td>{{ field.id }}</td>
-        <td>{{ field.display_order }}</td>
-        <td>{{ field.label }}</td>
-        <td>{{ field.field_type.value }}</td>
-        <td>{{ 'Yes' if field.is_required else 'No' }}</td>
-        <td>
-          <form method="post" action="/admin/services/{{ service.id }}/fields/{{ field.id }}/edit" style="display:inline;">
-            <input type="text" name="label" value="{{ field.label }}" required />
-            <select name="field_type">
-              {% for ft in field_types %}
-                <option value="{{ ft.value }}" {% if ft.value == field.field_type.value %}selected{% endif %}>{{ ft.value }}</option>
-              {% endfor %}
-            </select>
-            <label><input type="checkbox" name="is_required" {% if field.is_required %}checked{% endif %}/> Required</label>
-            <button type="submit">Update</button>
-          </form>
-          <form method="post" action="/admin/services/{{ service.id }}/fields/{{ field.id }}/delete" style="display:inline;">
-            <button type="submit">Delete</button>
-          </form>
-        </td>
-      </tr>
-    {% endfor %}
-  </table>
+  <section class="card">
+    <h3>فهرست فیلدها</h3>
+    {% if fields %}
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>ترتیب</th>
+              <th>برچسب</th>
+              <th>نوع</th>
+              <th>ضروری</th>
+              <th>عملیات</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for field in fields %}
+              <tr>
+                <td>{{ field.id }}</td>
+                <td>{{ field.display_order }}</td>
+                <td>{{ field.label }}</td>
+                <td><span class="badge">{{ field.field_type.value }}</span></td>
+                <td>{{ 'بله' if field.is_required else 'خیر' }}</td>
+                <td>
+                  <form method="post" action="/admin/services/{{ service.id }}/fields/{{ field.id }}/edit" class="grid" style="grid-template-columns: 1.4fr 0.8fr auto auto; gap: 8px; align-items: center;">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
+                    <input type="text" name="label" value="{{ field.label }}" required />
+                    <select name="field_type">
+                      {% for ft in field_types %}
+                        <option value="{{ ft.value }}" {% if ft.value == field.field_type.value %}selected{% endif %}>{{ ft.value }}</option>
+                      {% endfor %}
+                    </select>
+                    <label class="checkbox-row"><input type="checkbox" name="is_required" {% if field.is_required %}checked{% endif %}/> ضروری</label>
+                    <button class="btn btn-secondary" type="submit">ویرایش</button>
+                  </form>
+                  <div style="margin-top: 8px;">
+                    <form class="inline-form" method="post" action="/admin/services/{{ service.id }}/fields/{{ field.id }}/delete" onsubmit="return confirm('آیا از حذف این فیلد مطمئن هستید؟');">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
+                      <button class="btn btn-danger" type="submit">حذف</button>
+                    </form>
+                  </div>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="empty">هنوز فیلدی برای این خدمت تعریف نشده است.</div>
+    {% endif %}
+  </section>
 
-  <h3>Reorder Fields</h3>
-  <p>Enter comma-separated field IDs in desired order (example: 3,1,2).</p>
-  <form method="post" action="/admin/services/{{ service.id }}/fields/reorder">
-    <input type="text" name="ordered_field_ids" required />
-    <button type="submit">Reorder</button>
-  </form>
+  <section class="card">
+    <h3>تغییر ترتیب فیلدها</h3>
+    <p class="muted">شناسه فیلدها را با ویرگول به ترتیب وارد کنید. مثال: 3,1,2</p>
+    <form method="post" action="/admin/services/{{ service.id }}/fields/reorder" class="actions">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
+      <input style="max-width: 320px;" type="text" name="ordered_field_ids" required />
+      <button class="btn btn-primary" type="submit">ذخیره ترتیب</button>
+    </form>
+  </section>
 {% endblock %}

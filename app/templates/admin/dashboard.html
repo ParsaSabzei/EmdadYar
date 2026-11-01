@@ -1,11 +1,38 @@
 {% extends 'admin/base.html' %}
+
+{% block title %}داشبورد | امدادیار{% endblock %}
+{% block page_title %}داشبورد{% endblock %}
+{% block page_subtitle %}نمای کلی وضعیت سامانه{% endblock %}
+
 {% block content %}
-  <h2>Dashboard</h2>
-  <ul>
-    <li>Services: {{ stats.services }}</li>
-    <li>Requests: {{ stats.requests }}</li>
-    <li>Submitted requests: {{ stats.submitted }}</li>
-    <li>Unfinished requests: {{ stats.unfinished }}</li>
-    <li>Cancelled requests: {{ stats.cancelled }}</li>
-  </ul>
+  <section class="grid cols-3">
+    <div class="stats-item">
+      <div class="label">تعداد خدمات</div>
+      <div class="value">{{ stats.services }}</div>
+    </div>
+    <div class="stats-item">
+      <div class="label">کل درخواست‌ها</div>
+      <div class="value">{{ stats.requests }}</div>
+    </div>
+    <div class="stats-item">
+      <div class="label">ثبت‌شده</div>
+      <div class="value">{{ stats.submitted }}</div>
+    </div>
+    <div class="stats-item">
+      <div class="label">ناتمام</div>
+      <div class="value">{{ stats.unfinished }}</div>
+    </div>
+    <div class="stats-item">
+      <div class="label">لغوشده</div>
+      <div class="value">{{ stats.cancelled }}</div>
+    </div>
+  </section>
+
+  <section class="card">
+    <h3>دسترسی سریع</h3>
+    <div class="actions">
+      <a class="btn btn-primary" href="/admin/requests">مدیریت درخواست‌ها</a>
+      <a class="btn btn-secondary" href="/admin/services">مدیریت خدمات</a>
+    </div>
+  </section>
 {% endblock %}

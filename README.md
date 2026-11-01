@@ -1,79 +1,156 @@
-# Emdadyar (Phases 1-5)
+# Emdadyar
 
-Implemented so far:
-
-- **Phase 1**: FastAPI + SQLite + SQLAlchemy foundation
-- **Phase 2**: Dynamic service/request business logic
-- **Phase 3**: Bale bot integration (Balethon)
-- **Phase 4**: Simple server-rendered admin panel
-- **Phase 5**: Search, request deletion, file storage/serving, admin->beneficiary messaging
-
-Not implemented yet:
-
-- Phase 6 final hardening/deployment work
+A simple monolithic request-management MVP for charity workflows.
 
 ## Stack
 
-- Python
+- Python 3.13.13
 - FastAPI
 - SQLAlchemy
 - SQLite
-- Jinja2 templates
-- Balethon
+- Jinja2 templates (admin panel)
+- Balethon (Bale bot integration)
+- Local filesystem uploads
 
-## Run locally
+## Requirements
+
+- Linux-compatible environment
+- Python **3.13.13**
+- Bale bot token (for bot runtime and admin->beneficiary messaging)
+
+## Setup
 
 ```bash
-python -m venv .venv313
+git clone <repo-url>
+cd NEmdadYar
+
+python3.13 -m venv .venv313
 source .venv313/bin/activate
+
 pip install -r requirements.txt
 cp .env.example .env
 ```
 
-Set at least in `.env`:
-
-- `SECRET_KEY`
-- `DATABASE_URL`
-- `UPLOADS_DIR` (default: `uploads`)
-- `INITIAL_ADMIN_USERNAME`
-- `INITIAL_ADMIN_PASSWORD`
-- `BALE_BOT_TOKEN` (for bot + admin messaging)
-
-### Start FastAPI
+Verify environment:
 
 ```bash
-uvicorn app.main:app --reload
+.venv313/bin/python --version
+# expected: Python 3.13.13
 ```
 
-### Start Bale bot (separate process)
+## Configuration
+
+Configure `.env` using `.env.example`.
+
+Required/important variables:
+
+- `SECRET_KEY` - session signing key
+- `DATABASE_URL` - SQLite URL (default `sqlite:///./emdadyar.db`)
+- `UPLOADS_DIR` - uploads root directory (default `uploads`)
+- `BALE_BOT_TOKEN` - Bale bot token
+- `ADMIN_USERNAME`, `ADMIN_PASSWORD` - initial admin bootstrap credentials
+
+Backward-compatible fallback (optional):
+
+- `INITIAL_ADMIN_USERNAME`, `INITIAL_ADMIN_PASSWORD`
+
+Session cookie options:
+
+- `SESSION_COOKIE_SECURE` (`true`/`false`)
+- `SESSION_COOKIE_SAMESITE` (`lax`/`strict`/`none`)
+
+## Database initialization
+
+Database tables are created automatically on app startup (`init_db()`).
+
+## Run FastAPI app
 
 ```bash
-python run_bale_bot.py
+.venv313/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
+
+## Run Bale bot (separate process)
+
+```bash
+.venv313/bin/python run_bale_bot.py
+```
+
+FastAPI and Bale bot are separate processes and should both run in deployment.
 
 ## Admin panel
 
-Open:
+- Login URL: `http://127.0.0.1:8000/admin/login`
+- Initial admin is created automatically at startup if `ADMIN_USERNAME` and `ADMIN_PASSWORD` are set (or fallback `INITIAL_ADMIN_*`).
 
-- `GET /admin/login`
+## Upload storage
 
-Main routes:
+Uploaded files are stored under:
 
-- `GET /admin` dashboard
-- `GET /admin/services` + service/field/status management
-- `GET /admin/requests` request list with service/status filters + search by name/national ID/tracking code
-- `GET /admin/requests/{id}` request details, status update, file access, request deletion, message send
+- `UPLOADS_DIR/requests/<request_id>/...`
 
-## File handling (Phase 5)
-
-- Uploaded files are stored under `UPLOADS_DIR/requests/<request_id>/`
-- Allowed types: PDF, JPG, JPEG, PNG
-- Max size: 10 MB
-- Stored DB path is safe generated path
-- Original filename is preserved as metadata
+`uploads/` is intentionally not publicly exposed as static files.
 
 ## Tests
 
 ```bash
 .venv313/bin/pytest -q
 ```
+
+## Simple Linux deployment (MVP)
+
+Run as two long-lived processes:
+
+1. FastAPI/Uvicorn
+2. Bale bot process
+
+Optional `systemd` examples:
+
+### `/etc/systemd/system/emdadyar-web.service`
+
+```ini
+[Unit]
+Description=Emdadyar FastAPI
+After=network.target
+
+[Service]
+WorkingDirectory=/opt/emdadyar
+ExecStart=/opt/emdadyar/.venv313/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000
+EnvironmentFile=/opt/emdadyar/.env
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+```
+
+### `/etc/systemd/system/emdadyar-bot.service`
+
+```ini
+[Unit]
+Description=Emdadyar Bale Bot
+After=network.target
+
+[Service]
+WorkingDirectory=/opt/emdadyar
+ExecStart=/opt/emdadyar/.venv313/bin/python run_bale_bot.py
+EnvironmentFile=/opt/emdadyar/.env
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Then:
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable --now emdadyar-web emdadyar-bot
+```
+
+## Known limitation
+
+Real Bale API calls may fail in restricted environments with:
+
+- `httpx.ProxyError: 511 Network Authentication Required`
+
+This originates from environment/network proxy restrictions in the Balethon/httpx stack, not from Emdadyar business logic.
+Automated tests mock Bale calls and do not require real Bale network access.

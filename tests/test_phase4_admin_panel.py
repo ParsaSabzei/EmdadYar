@@ -1,3 +1,4 @@
+import re
 from pathlib import Path
 
 from fastapi.testclient import TestClient
@@ -27,13 +28,24 @@ def _setup_db(tmp_path: Path) -> str:
     return database_url
 
 
-def _login(client: TestClient, username: str = "admin", password: str = "secret") -> None:
+def _extract_csrf_token(html: str) -> str:
+    match = re.search(r'name="csrf_token"\s+value="([^"]+)"', html)
+    assert match is not None
+    return match.group(1)
+
+
+def _login(client: TestClient, username: str = "admin", password: str = "secret") -> str:
+    login_page = client.get("/admin/login")
+    assert login_page.status_code == 200
+    csrf_token = _extract_csrf_token(login_page.text)
+
     resp = client.post(
         "/admin/login",
-        data={"username": username, "password": password},
+        data={"username": username, "password": password, "csrf_token": csrf_token},
         follow_redirects=False,
     )
     assert resp.status_code == 303
+    return csrf_token
 
 
 def _seed_admin() -> None:
@@ -75,10 +87,11 @@ def test_service_crud(tmp_path: Path, monkeypatch) -> None:
 
     with TestClient(app) as client:
         _login(client)
+        csrf_token = _extract_csrf_token(client.get("/admin/services").text)
 
         create_resp = client.post(
             "/admin/services/create",
-            data={"name": "Loan", "is_active": "on"},
+            data={"name": "Loan", "is_active": "on", "csrf_token": csrf_token},
             follow_redirects=False,
         )
         assert create_resp.status_code == 303
@@ -91,7 +104,7 @@ def test_service_crud(tmp_path: Path, monkeypatch) -> None:
 
         edit_resp = client.post(
             f"/admin/services/{service_id}/edit",
-            data={"name": "Loan Updated", "is_active": "on"},
+            data={"name": "Loan Updated", "is_active": "on", "csrf_token": csrf_token},
             follow_redirects=False,
         )
         assert edit_resp.status_code == 303
@@ -101,7 +114,11 @@ def test_service_crud(tmp_path: Path, monkeypatch) -> None:
             assert service is not None
             assert service.name == "Loan Updated"
 
-        delete_resp = client.post(f"/admin/services/{service_id}/delete", follow_redirects=False)
+        delete_resp = client.post(
+            f"/admin/services/{service_id}/delete",
+            data={"csrf_token": csrf_token},
+            follow_redirects=False,
+        )
         assert delete_resp.status_code == 303
 
 
@@ -117,10 +134,11 @@ def test_field_crud(tmp_path: Path, monkeypatch) -> None:
 
     with TestClient(app) as client:
         _login(client)
+        csrf_token = _extract_csrf_token(client.get(f"/admin/services/{service_id}/fields").text)
 
         create = client.post(
             f"/admin/services/{service_id}/fields/create",
-            data={"label": "Name", "field_type": "TEXT", "is_required": "on"},
+            data={"label": "Name", "field_type": "TEXT", "is_required": "on", "csrf_token": csrf_token},
             follow_redirects=False,
         )
         assert create.status_code == 303
@@ -134,19 +152,23 @@ def test_field_crud(tmp_path: Path, monkeypatch) -> None:
 
         edit = client.post(
             f"/admin/services/{service_id}/fields/{field_id}/edit",
-            data={"label": "Full Name", "field_type": "TEXT", "is_required": "on"},
+            data={"label": "Full Name", "field_type": "TEXT", "is_required": "on", "csrf_token": csrf_token},
             follow_redirects=False,
         )
         assert edit.status_code == 303
 
         reorder = client.post(
             f"/admin/services/{service_id}/fields/reorder",
-            data={"ordered_field_ids": str(field_id)},
+            data={"ordered_field_ids": str(field_id), "csrf_token": csrf_token},
             follow_redirects=False,
         )
         assert reorder.status_code == 303
 
-        delete = client.post(f"/admin/services/{service_id}/fields/{field_id}/delete", follow_redirects=False)
+        delete = client.post(
+            f"/admin/services/{service_id}/fields/{field_id}/delete",
+            data={"csrf_token": csrf_token},
+            follow_redirects=False,
+        )
         assert delete.status_code == 303
 
 
@@ -162,10 +184,11 @@ def test_status_crud(tmp_path: Path, monkeypatch) -> None:
 
     with TestClient(app) as client:
         _login(client)
+        csrf_token = _extract_csrf_token(client.get(f"/admin/services/{service_id}/statuses").text)
 
         create = client.post(
             f"/admin/services/{service_id}/statuses/create",
-            data={"name": "Received"},
+            data={"name": "Received", "csrf_token": csrf_token},
             follow_redirects=False,
         )
         assert create.status_code == 303
@@ -179,19 +202,23 @@ def test_status_crud(tmp_path: Path, monkeypatch) -> None:
 
         edit = client.post(
             f"/admin/services/{service_id}/statuses/{status_id}/edit",
-            data={"name": "Under review"},
+            data={"name": "Under review", "csrf_token": csrf_token},
             follow_redirects=False,
         )
         assert edit.status_code == 303
 
         reorder = client.post(
             f"/admin/services/{service_id}/statuses/reorder",
-            data={"ordered_status_ids": str(status_id)},
+            data={"ordered_status_ids": str(status_id), "csrf_token": csrf_token},
             follow_redirects=False,
         )
         assert reorder.status_code == 303
 
-        delete = client.post(f"/admin/services/{service_id}/statuses/{status_id}/delete", follow_redirects=False)
+        delete = client.post(
+            f"/admin/services/{service_id}/statuses/{status_id}/delete",
+            data={"csrf_token": csrf_token},
+            follow_redirects=False,
+        )
         assert delete.status_code == 303
 
 
@@ -216,6 +243,7 @@ def test_request_list_and_status_update(tmp_path: Path, monkeypatch) -> None:
 
     with TestClient(app) as client:
         _login(client)
+        csrf_token = _extract_csrf_token(client.get(f"/admin/requests/{request_id}").text)
 
         listing = client.get("/admin/requests")
         assert listing.status_code == 200
@@ -230,14 +258,14 @@ def test_request_list_and_status_update(tmp_path: Path, monkeypatch) -> None:
 
         update_status = client.post(
             f"/admin/requests/{request_id}/status",
-            data={"status_id": str(status2.id)},
+            data={"status_id": str(status2.id), "csrf_token": csrf_token},
             follow_redirects=False,
         )
         assert update_status.status_code == 303
 
         send_message = client.post(
             f"/admin/requests/{request_id}/message",
-            data={"message_text": "hello"},
+            data={"message_text": "hello", "csrf_token": csrf_token},
             follow_redirects=False,
         )
         assert send_message.status_code == 303

@@ -547,7 +547,7 @@ def delete_request_permanently(db: Session, *, request_id: int) -> None:
     request = _get_request_or_raise(db, request_id)
 
     file_paths = [answer.file_path for answer in request.answers if answer.file_path]
-    delete_request_files([path for path in file_paths if path is not None])
+    delete_request_files([path for path in file_paths if path is not None], request_id=request.id)
 
     db.delete(request)
     db.commit()

@@ -22,7 +22,12 @@ async def lifespan(_app: FastAPI):
 
 settings = get_settings()
 app = FastAPI(title=settings.app_name, debug=settings.debug, lifespan=lifespan)
-app.add_middleware(SessionMiddleware, secret_key=settings.secret_key)
+app.add_middleware(
+    SessionMiddleware,
+    secret_key=settings.secret_key,
+    https_only=settings.session_cookie_secure,
+    same_site=settings.session_cookie_samesite,
+)
 
 app.include_router(health_router)
 app.include_router(auth_router)

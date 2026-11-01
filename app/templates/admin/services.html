@@ -1,41 +1,73 @@
 {% extends 'admin/base.html' %}
+
+{% block title %}خدمات | امدادیار{% endblock %}
+{% block page_title %}خدمات{% endblock %}
+{% block page_subtitle %}ایجاد و مدیریت خدمات، فیلدها و وضعیت‌ها{% endblock %}
+
 {% block content %}
-  <h2>Services</h2>
+  {% if message %}<div class="alert alert-success">✓ {{ message }}</div>{% endif %}
+  {% if error %}<div class="alert alert-error">⚠ {{ error }}</div>{% endif %}
 
-  {% if message %}<p style="color: green;">{{ message }}</p>{% endif %}
-  {% if error %}<p style="color: red;">{{ error }}</p>{% endif %}
+  <section class="card">
+    <h3>افزودن خدمت</h3>
+    <form method="post" action="/admin/services/create" class="form-grid">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
+      <div class="field">
+        <label for="service-name">نام خدمت *</label>
+        <input id="service-name" type="text" name="name" required placeholder="مثلاً کمک هزینه درمان" />
+      </div>
+      <div class="field" style="align-content: end;">
+        <label class="checkbox-row"><input type="checkbox" name="is_active" checked /> فعال</label>
+      </div>
+      <div>
+        <button class="btn btn-primary" type="submit">افزودن خدمت</button>
+      </div>
+    </form>
+  </section>
 
-  <h3>Create Service</h3>
-  <form method="post" action="/admin/services/create">
-    <input type="text" name="name" placeholder="Service name" required />
-    <label>
-      <input type="checkbox" name="is_active" checked /> Active
-    </label>
-    <button type="submit">Create</button>
-  </form>
-
-  <h3>Service List</h3>
-  <table border="1" cellpadding="6">
-    <tr>
-      <th>ID</th>
-      <th>Name</th>
-      <th>Active</th>
-      <th>Actions</th>
-    </tr>
-    {% for service in services %}
-      <tr>
-        <td>{{ service.id }}</td>
-        <td>{{ service.name }}</td>
-        <td>{{ 'Yes' if service.is_active else 'No' }}</td>
-        <td>
-          <a href="/admin/services/{{ service.id }}/edit">Edit</a> |
-          <a href="/admin/services/{{ service.id }}/fields">Fields</a> |
-          <a href="/admin/services/{{ service.id }}/statuses">Statuses</a>
-          <form method="post" action="/admin/services/{{ service.id }}/delete" style="display:inline;">
-            <button type="submit">Delete</button>
-          </form>
-        </td>
-      </tr>
-    {% endfor %}
-  </table>
+  <section class="card">
+    <h3>فهرست خدمات</h3>
+    {% if services %}
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>نام خدمت</th>
+              <th>وضعیت</th>
+              <th>عملیات</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for service in services %}
+              <tr>
+                <td>{{ service.id }}</td>
+                <td>{{ service.name }}</td>
+                <td>
+                  {% if service.is_active %}
+                    <span class="badge badge-submitted">فعال</span>
+                  {% else %}
+                    <span class="badge badge-cancelled">غیرفعال</span>
+                  {% endif %}
+                </td>
+                <td>
+                  <div class="actions">
+                    <a class="btn btn-secondary" href="/admin/services/{{ service.id }}/edit">ویرایش</a>
+                    <a class="btn btn-secondary" href="/admin/services/{{ service.id }}/fields">فیلدها</a>
+                    <a class="btn btn-secondary" href="/admin/services/{{ service.id }}/statuses">وضعیت‌ها</a>
+                    <form class="inline-form" method="post" action="/admin/services/{{ service.id }}/delete" onsubmit="return confirm('آیا از حذف این خدمت مطمئن هستید؟');">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
+                      <button class="btn btn-danger" type="submit">حذف</button>
+                    </form>
+                  </div>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="empty">هنوز خدمتی ثبت نشده است.</div>
+    {% endif %}
+  </section>
 {% endblock %}

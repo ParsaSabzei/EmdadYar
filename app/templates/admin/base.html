@@ -1,23 +1,486 @@
 <!doctype html>
-<html>
+<html lang="fa" dir="rtl">
 <head>
   <meta charset="utf-8" />
-  <title>{{ title or 'Emdadyar Admin' }}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{% block title %}امدادیار | پنل مدیریت{% endblock %}</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;700&display=swap');
+
+    :root {
+      --color-primary: #2f6ea6;
+      --color-primary-soft: #eaf3fb;
+      --color-primary-dark: #235784;
+      --color-bg: #f4f6f8;
+      --color-surface: #ffffff;
+      --color-text: #1f2937;
+      --color-muted: #6b7280;
+      --color-border: #e5e7eb;
+      --color-success: #0f766e;
+      --color-success-bg: #ecfdf5;
+      --color-warning: #9a5b05;
+      --color-warning-bg: #fffbeb;
+      --color-danger: #b42318;
+      --color-danger-bg: #fef3f2;
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 16px;
+      --shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.06);
+      --shadow-md: 0 8px 18px rgba(16, 24, 40, 0.06);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "Vazirmatn", Tahoma, Arial, sans-serif;
+      color: var(--color-text);
+      background: var(--color-bg);
+      line-height: 1.65;
+    }
+
+    a { color: var(--color-primary); text-decoration: none; }
+    a:hover { color: var(--color-primary-dark); }
+
+    .layout {
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: 260px 1fr;
+    }
+
+    .sidebar {
+      background: var(--color-surface);
+      border-left: 1px solid var(--color-border);
+      box-shadow: var(--shadow-sm);
+      padding: 18px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+    }
+
+    .brand h1 {
+      margin: 0;
+      font-size: 1.25rem;
+      font-weight: 700;
+    }
+
+    .brand p {
+      margin: 4px 0 0;
+      color: var(--color-muted);
+      font-size: 0.86rem;
+    }
+
+    .nav-list {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      display: grid;
+      gap: 8px;
+    }
+
+    .nav-link {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 12px;
+      border-radius: var(--radius-sm);
+      color: var(--color-text);
+      font-weight: 500;
+      border: 1px solid transparent;
+    }
+
+    .nav-link:hover {
+      background: var(--color-primary-soft);
+      border-color: #d7e8f7;
+    }
+
+    .nav-link.active {
+      background: var(--color-primary-soft);
+      color: var(--color-primary-dark);
+      border-color: #c7dff3;
+    }
+
+    .sidebar-footer {
+      margin-top: auto;
+      padding-top: 12px;
+      border-top: 1px solid var(--color-border);
+    }
+
+    .main-panel {
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .topbar {
+      background: var(--color-surface);
+      border-bottom: 1px solid var(--color-border);
+      padding: 18px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: start;
+      gap: 12px;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .topbar h2 {
+      margin: 0;
+      font-size: 1.3rem;
+      font-weight: 700;
+    }
+
+    .topbar p {
+      margin: 6px 0 0;
+      color: var(--color-muted);
+      font-size: 0.92rem;
+    }
+
+    .admin-pill {
+      background: #f9fafb;
+      border: 1px solid var(--color-border);
+      border-radius: 999px;
+      padding: 6px 12px;
+      font-size: 0.85rem;
+      color: var(--color-muted);
+      white-space: nowrap;
+    }
+
+    .content {
+      padding: 24px;
+      display: grid;
+      gap: 16px;
+    }
+
+    .card {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-sm);
+      padding: 16px;
+    }
+
+    .card h3, .card h4 {
+      margin: 0 0 12px;
+      font-size: 1.02rem;
+    }
+
+    .muted { color: var(--color-muted); }
+
+    .grid {
+      display: grid;
+      gap: 12px;
+    }
+
+    .grid.cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .grid.cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+
+    .stats-item {
+      background: #f9fbfd;
+      border: 1px solid #e7edf3;
+      border-radius: var(--radius-sm);
+      padding: 12px;
+    }
+
+    .stats-item .label { font-size: 0.85rem; color: var(--color-muted); }
+    .stats-item .value { font-size: 1.3rem; font-weight: 700; margin-top: 2px; }
+
+    .form-grid {
+      display: grid;
+      gap: 12px;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .field { display: grid; gap: 6px; }
+    .field label { font-size: 0.92rem; font-weight: 500; }
+
+    input[type="text"],
+    input[type="password"],
+    textarea,
+    select {
+      width: 100%;
+      border: 1px solid #d0d5dd;
+      border-radius: 10px;
+      padding: 10px 12px;
+      font: inherit;
+      color: var(--color-text);
+      background: #fff;
+    }
+
+    textarea { min-height: 110px; resize: vertical; }
+
+    input:focus, textarea:focus, select:focus {
+      outline: 2px solid #bfdbfe;
+      outline-offset: 1px;
+      border-color: #93c5fd;
+    }
+
+    .checkbox-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.92rem;
+      color: var(--color-muted);
+    }
+
+    .btn {
+      border: 1px solid transparent;
+      border-radius: 10px;
+      padding: 9px 14px;
+      font: inherit;
+      font-weight: 500;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      background: transparent;
+      color: var(--color-text);
+    }
+
+    .btn:focus { outline: 2px solid #bfdbfe; outline-offset: 1px; }
+    .btn-primary { background: var(--color-primary); color: #fff; }
+    .btn-primary:hover { background: var(--color-primary-dark); color: #fff; }
+    .btn-secondary { border-color: var(--color-border); background: #fff; }
+    .btn-danger { background: #b42318; color: #fff; }
+    .btn-danger:hover { background: #912018; color: #fff; }
+
+    .alert {
+      border: 1px solid;
+      border-radius: 10px;
+      padding: 10px 12px;
+      font-size: 0.92rem;
+    }
+
+    .alert-success { background: var(--color-success-bg); border-color: #a7f3d0; color: var(--color-success); }
+    .alert-error { background: var(--color-danger-bg); border-color: #fecaca; color: var(--color-danger); }
+
+    .table-wrap {
+      overflow-x: auto;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      background: #fff;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 760px;
+    }
+
+    th, td {
+      padding: 11px 12px;
+      text-align: right;
+      border-bottom: 1px solid #edf0f3;
+      vertical-align: top;
+      font-size: 0.92rem;
+    }
+
+    th {
+      background: #f8fafc;
+      color: #334155;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    tr:hover td { background: #fcfdff; }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .inline-form { display: inline-flex; margin: 0; }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      border: 1px solid #d0d5dd;
+      padding: 3px 10px;
+      font-size: 0.8rem;
+      font-weight: 500;
+      white-space: nowrap;
+      background: #f9fafb;
+      color: #374151;
+    }
+
+    .badge-submitted { background: #ecfdf5; border-color: #a7f3d0; color: #0f766e; }
+    .badge-cancelled { background: #fef3f2; border-color: #fecaca; color: #b42318; }
+    .badge-unfinished { background: #fffbeb; border-color: #fde68a; color: #9a6700; }
+
+    .kv {
+      display: grid;
+      gap: 10px;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .kv-item {
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-sm);
+      background: #fbfdff;
+      padding: 10px;
+    }
+
+    .kv-item .k { font-size: 0.82rem; color: var(--color-muted); }
+    .kv-item .v { font-weight: 600; margin-top: 2px; word-break: break-word; }
+
+    .qa-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .qa-item {
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-sm);
+      background: #fff;
+      padding: 10px;
+    }
+
+    .qa-question { color: var(--color-muted); font-size: 0.86rem; margin-bottom: 4px; }
+    .qa-answer { font-size: 0.95rem; word-break: break-word; }
+
+    .empty {
+      text-align: center;
+      color: var(--color-muted);
+      border: 1px dashed #cfd8e3;
+      border-radius: var(--radius-md);
+      padding: 18px;
+      background: #fbfdff;
+    }
+
+    .auth-shell {
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 20px;
+    }
+
+    .auth-box {
+      width: min(440px, 100%);
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-md);
+      padding: 24px;
+    }
+
+    .auth-title { text-align: center; margin: 0; font-size: 1.5rem; }
+    .auth-subtitle { text-align: center; color: var(--color-muted); margin: 6px 0 20px; }
+
+    @media (max-width: 1024px) {
+      .layout { grid-template-columns: 88px 1fr; }
+      .brand p,
+      .nav-link span,
+      .sidebar-footer .btn { display: none; }
+      .brand h1 { font-size: 1.1rem; text-align: center; }
+      .nav-link { justify-content: center; }
+      .topbar { padding: 14px 16px; }
+      .content { padding: 16px; }
+      .kv { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+
+    @media (max-width: 768px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+
+      .sidebar {
+        position: static;
+        height: auto;
+        border-left: 0;
+        border-bottom: 1px solid var(--color-border);
+      }
+
+      .nav-list {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      .nav-link,
+      .nav-link span { display: inline-flex; }
+
+      .sidebar-footer .btn {
+        display: inline-flex;
+        width: 100%;
+      }
+
+      .form-grid,
+      .grid.cols-2,
+      .grid.cols-3,
+      .kv {
+        grid-template-columns: 1fr;
+      }
+
+      table { min-width: 640px; }
+    }
+  </style>
 </head>
-<body>
-  <h1>Emdadyar Admin</h1>
+<body class="{% if admin %}app-shell{% else %}auth-shell{% endif %}">
+  {% set page_content %}{% block content %}{% endblock %}{% endset %}
+
   {% if admin %}
-    <p>Logged in as: {{ admin.username }}</p>
-    <form method="post" action="/admin/logout">
-      <button type="submit">Logout</button>
-    </form>
-    <p>
-      <a href="/admin">Dashboard</a> |
-      <a href="/admin/services">Services</a> |
-      <a href="/admin/requests">Requests</a>
-    </p>
+    <div class="layout">
+      <aside class="sidebar">
+        <div class="brand">
+          <h1>امدادیار</h1>
+          <p>سامانه مدیریت درخواست‌ها</p>
+        </div>
+
+        <nav>
+          <ul class="nav-list">
+            <li>
+              <a class="nav-link {% if request.url.path == '/admin' %}active{% endif %}" href="/admin" aria-current="{% if request.url.path == '/admin' %}page{% endif %}">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 13h8V3H3v10Zm0 8h8v-6H3v6Zm10 0h8V11h-8v10Zm0-18v6h8V3h-8Z" fill="currentColor"/></svg>
+                <span>داشبورد</span>
+              </a>
+            </li>
+            <li>
+              <a class="nav-link {% if request.url.path.startswith('/admin/requests') %}active{% endif %}" href="/admin/requests" aria-current="{% if request.url.path.startswith('/admin/requests') %}page{% endif %}">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 4h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Zm2 4h8v2H8V8Zm0 4h8v2H8v-2Zm0 4h5v2H8v-2Z" fill="currentColor"/></svg>
+                <span>درخواست‌ها</span>
+              </a>
+            </li>
+            <li>
+              <a class="nav-link {% if request.url.path.startswith('/admin/services') %}active{% endif %}" href="/admin/services" aria-current="{% if request.url.path.startswith('/admin/services') %}page{% endif %}">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 7a3 3 0 0 1 3-3h10a3 3 0 0 1 3 3v2H4V7Zm0 4h16v6a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3v-6Z" fill="currentColor"/></svg>
+                <span>خدمات</span>
+              </a>
+            </li>
+          </ul>
+        </nav>
+
+        <div class="sidebar-footer">
+          <form method="post" action="/admin/logout" onsubmit="return confirm('آیا از خروج مطمئن هستید؟');">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
+            <button class="btn btn-secondary" type="submit">خروج</button>
+          </form>
+        </div>
+      </aside>
+
+      <div class="main-panel">
+        <header class="topbar">
+          <div>
+            <h2>{% block page_title %}پنل مدیریت{% endblock %}</h2>
+            <p>{% block page_subtitle %}مدیریت ساده خدمات و درخواست‌ها{% endblock %}</p>
+          </div>
+          <div class="admin-pill">مدیر: {{ admin.username }}</div>
+        </header>
+
+        <main class="content">
+          {{ page_content | safe }}
+        </main>
+      </div>
+    </div>
+  {% else %}
+    <div class="auth-box">
+      {{ page_content | safe }}
+    </div>
   {% endif %}
-  <hr />
-  {% block content %}{% endblock %}
 </body>
 </html>

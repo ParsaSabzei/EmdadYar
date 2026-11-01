@@ -96,6 +96,15 @@ def validate_file(content: bytes, *, mime_type: str | None, filename: str | None
     return ext, size
 
 
+def request_upload_dir(request_id: int) -> Path:
+    return _uploads_root() / "requests" / str(request_id)
+
+
+def is_resolved_file_in_request_dir(resolved: Path, request_id: int) -> bool:
+    base = request_upload_dir(request_id).resolve()
+    return resolved == base or base in resolved.parents
+
+
 def store_request_file(
     *,
     request_id: int,
@@ -107,8 +116,7 @@ def store_request_file(
     safe_original = _safe_original_filename(filename)
     ext, size = validate_file(content, mime_type=mime_type, filename=safe_original, declared_size=declared_size)
 
-    root = _uploads_root()
-    request_dir = root / "requests" / str(request_id)
+    request_dir = request_upload_dir(request_id)
     request_dir.mkdir(parents=True, exist_ok=True)
 
     generated_name = f"{uuid.uuid4().hex}.{ext}"
@@ -135,14 +143,14 @@ def resolve_stored_file_path(stored_path: str) -> Path | None:
     return resolved
 
 
-def delete_request_files(file_paths: list[str]) -> None:
+def delete_request_files(file_paths: list[str], *, request_id: int) -> None:
     visited_dirs: set[Path] = set()
     for raw_path in file_paths:
         resolved = resolve_stored_file_path(raw_path)
         if resolved is None:
             continue
         try:
-            if resolved.exists() and resolved.is_file():
+            if resolved.exists() and resolved.is_file() and is_resolved_file_in_request_dir(resolved, request_id):
                 resolved.unlink()
                 visited_dirs.add(resolved.parent)
         except OSError:

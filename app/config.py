@@ -20,12 +20,20 @@ class Settings:
     database_url: str
     initial_admin_username: str | None
     initial_admin_password: str | None
+    admin_username: str | None
+    admin_password: str | None
     bale_bot_token: str | None
     uploads_dir: str
+    session_cookie_secure: bool
+    session_cookie_samesite: str
 
 
 @lru_cache
 def get_settings() -> Settings:
+    same_site = os.getenv("SESSION_COOKIE_SAMESITE", "lax").lower().strip()
+    if same_site not in {"lax", "strict", "none"}:
+        same_site = "lax"
+
     return Settings(
         app_name=os.getenv("APP_NAME", "Emdadyar"),
         app_host=os.getenv("APP_HOST", "127.0.0.1"),
@@ -35,8 +43,12 @@ def get_settings() -> Settings:
         database_url=os.getenv("DATABASE_URL", "sqlite:///./emdadyar.db"),
         initial_admin_username=os.getenv("INITIAL_ADMIN_USERNAME"),
         initial_admin_password=os.getenv("INITIAL_ADMIN_PASSWORD"),
+        admin_username=os.getenv("ADMIN_USERNAME"),
+        admin_password=os.getenv("ADMIN_PASSWORD"),
         bale_bot_token=os.getenv("BALE_BOT_TOKEN"),
         uploads_dir=os.getenv("UPLOADS_DIR", "uploads"),
+        session_cookie_secure=os.getenv("SESSION_COOKIE_SECURE", "false").lower() == "true",
+        session_cookie_samesite=same_site,
     )
 
 

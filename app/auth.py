@@ -64,8 +64,8 @@ def authenticate_admin(db: Session, username: str, password: str) -> Admin | Non
 
 def ensure_initial_admin() -> bool:
     settings = get_settings()
-    username = settings.initial_admin_username
-    password = settings.initial_admin_password
+    username = settings.admin_username or settings.initial_admin_username
+    password = settings.admin_password or settings.initial_admin_password
 
     if not username or not password:
         return False

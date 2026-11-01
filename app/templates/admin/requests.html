@@ -1,59 +1,101 @@
 {% extends 'admin/base.html' %}
+
+{% block title %}درخواست‌ها | امدادیار{% endblock %}
+{% block page_title %}درخواست‌ها{% endblock %}
+{% block page_subtitle %}جستجو و بررسی درخواست‌های ثبت‌شده{% endblock %}
+
 {% block content %}
-  <h2>Requests</h2>
+  {% if message %}<div class="alert alert-success">✓ {{ message }}</div>{% endif %}
+  {% if error %}<div class="alert alert-error">⚠ {{ error }}</div>{% endif %}
 
-  {% if message %}<p style="color:green;">{{ message }}</p>{% endif %}
-  {% if error %}<p style="color:red;">{{ error }}</p>{% endif %}
+  <section class="card">
+    <h3>جستجو و فیلتر</h3>
+    <form method="get" action="/admin/requests" class="form-grid">
+      <div class="field">
+        <label for="service_id">خدمت</label>
+        <select id="service_id" name="service_id">
+          <option value="">همه</option>
+          {% for service in services %}
+            <option value="{{ service.id }}" {% if selected_service_id == service.id %}selected{% endif %}>{{ service.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
 
-  <form method="get" action="/admin/requests">
-    <label>Service:</label>
-    <select name="service_id">
-      <option value="">All</option>
-      {% for service in services %}
-        <option value="{{ service.id }}" {% if selected_service_id == service.id %}selected{% endif %}>{{ service.name }}</option>
-      {% endfor %}
-    </select>
+      <div class="field">
+        <label for="status_id">وضعیت</label>
+        <select id="status_id" name="status_id">
+          <option value="">همه</option>
+          {% for status in statuses %}
+            <option value="{{ status.id }}" {% if selected_status_id == status.id %}selected{% endif %}>{{ status.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
 
-    <label>Status:</label>
-    <select name="status_id">
-      <option value="">All</option>
-      {% for status in statuses %}
-        <option value="{{ status.id }}" {% if selected_status_id == status.id %}selected{% endif %}>{{ status.name }}</option>
-      {% endfor %}
-    </select>
+      <div class="field">
+        <label for="search_name">نام متقاضی</label>
+        <input id="search_name" type="text" name="search_name" value="{{ search_name }}" />
+      </div>
 
-    <label>Name:</label>
-    <input type="text" name="search_name" value="{{ search_name }}" />
+      <div class="field">
+        <label for="search_national_id">کد ملی</label>
+        <input id="search_national_id" type="text" name="search_national_id" value="{{ search_national_id }}" />
+      </div>
 
-    <label>National ID:</label>
-    <input type="text" name="search_national_id" value="{{ search_national_id }}" />
+      <div class="field">
+        <label for="search_tracking_code">کد پیگیری</label>
+        <input id="search_tracking_code" type="text" name="search_tracking_code" value="{{ search_tracking_code }}" />
+      </div>
 
-    <label>Tracking Code:</label>
-    <input type="text" name="search_tracking_code" value="{{ search_tracking_code }}" />
+      <div style="align-content: end;">
+        <button class="btn btn-primary" type="submit">جستجو</button>
+      </div>
+    </form>
+  </section>
 
-    <button type="submit">Search / Filter</button>
-  </form>
-
-  <table border="1" cellpadding="6">
-    <tr>
-      <th>Tracking Code</th>
-      <th>Service</th>
-      <th>Beneficiary Name</th>
-      <th>Chat ID</th>
-      <th>Status</th>
-      <th>Created</th>
-      <th>Details</th>
-    </tr>
-    {% for item in requests %}
-      <tr>
-        <td>{{ item.tracking_code or 'UNFINISHED' }}</td>
-        <td>{{ item.service.name }}</td>
-        <td>{{ beneficiary_names.get(item.id, '-') }}</td>
-        <td>{{ item.chat_id }}</td>
-        <td>{{ item.current_status.name if item.current_status else item.state.value }}</td>
-        <td>{{ item.created_at|jalali }}</td>
-        <td><a href="/admin/requests/{{ item.id }}">View</a></td>
-      </tr>
-    {% endfor %}
-  </table>
+  <section class="card">
+    <h3>نتایج</h3>
+    {% if requests %}
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>کد پیگیری</th>
+              <th>خدمت</th>
+              <th>نام متقاضی</th>
+              <th>Chat ID</th>
+              <th>وضعیت</th>
+              <th>تاریخ</th>
+              <th>عملیات</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in requests %}
+              {% set status_text = item.current_status.name if item.current_status else item.state.value %}
+              <tr>
+                <td>{{ item.tracking_code or 'UNFINISHED' }}</td>
+                <td>{{ item.service.name }}</td>
+                <td>{{ beneficiary_names.get(item.id, '-') }}</td>
+                <td>{{ item.chat_id }}</td>
+                <td>
+                  {% if item.state.value == 'SUBMITTED' %}
+                    <span class="badge badge-submitted">{{ status_text }}</span>
+                  {% elif item.state.value == 'CANCELLED' %}
+                    <span class="badge badge-cancelled">{{ status_text }}</span>
+                  {% elif item.state.value == 'UNFINISHED' %}
+                    <span class="badge badge-unfinished">{{ status_text }}</span>
+                  {% else %}
+                    <span class="badge">{{ status_text }}</span>
+                  {% endif %}
+                </td>
+                <td>{{ item.created_at|jalali }}</td>
+                <td><a class="btn btn-secondary" href="/admin/requests/{{ item.id }}">مشاهده</a></td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="empty">در حال حاضر هیچ درخواستی برای نمایش وجود ندارد.</div>
+    {% endif %}
+  </section>
 {% endblock %}

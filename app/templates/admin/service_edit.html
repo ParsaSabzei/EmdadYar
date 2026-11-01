@@ -1,16 +1,31 @@
 {% extends 'admin/base.html' %}
+
+{% block title %}ویرایش خدمت | امدادیار{% endblock %}
+{% block page_title %}ویرایش خدمت{% endblock %}
+{% block page_subtitle %}تنظیم نام و وضعیت خدمت{% endblock %}
+
 {% block content %}
-  <h2>Edit Service</h2>
-  {% if error %}<p style="color:red;">{{ error }}</p>{% endif %}
+  {% if error %}<div class="alert alert-error">⚠ {{ error }}</div>{% endif %}
 
-  <form method="post" action="/admin/services/{{ service.id }}/edit">
-    <label>Name</label><br />
-    <input type="text" name="name" value="{{ service.name }}" required /><br /><br />
+  <section class="card">
+    <h3>اطلاعات خدمت</h3>
+    <form method="post" action="/admin/services/{{ service.id }}/edit" class="grid" style="max-width: 620px;">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
 
-    <label>
-      <input type="checkbox" name="is_active" {% if service.is_active %}checked{% endif %} /> Active
-    </label><br /><br />
+      <div class="field">
+        <label for="name">نام خدمت *</label>
+        <input id="name" type="text" name="name" value="{{ service.name }}" required />
+      </div>
 
-    <button type="submit">Save</button>
-  </form>
+      <label class="checkbox-row">
+        <input type="checkbox" name="is_active" {% if service.is_active %}checked{% endif %} />
+        فعال
+      </label>
+
+      <div class="actions">
+        <button class="btn btn-primary" type="submit">ذخیره تغییرات</button>
+        <a class="btn btn-secondary" href="/admin/services">انصراف</a>
+      </div>
+    </form>
+  </section>
 {% endblock %}

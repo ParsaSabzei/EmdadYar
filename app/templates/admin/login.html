@@ -1,22 +1,28 @@
-<!doctype html>
-<html>
-<head>
-  <meta charset="utf-8" />
-  <title>Admin Login</title>
-</head>
-<body>
-  <h1>Admin Login</h1>
+{% extends 'admin/base.html' %}
+
+{% block title %}ورود مدیر | امدادیار{% endblock %}
+
+{% block content %}
+  <h1 class="auth-title">امدادیار</h1>
+  <p class="auth-subtitle">سامانه مدیریت درخواست‌ها</p>
+
   {% if error %}
-    <p style="color: red;">{{ error }}</p>
+    <div class="alert alert-error">✕ {{ error }}</div>
   {% endif %}
-  <form method="post" action="/admin/login">
-    <label>Username</label><br />
-    <input type="text" name="username" required /><br /><br />
 
-    <label>Password</label><br />
-    <input type="password" name="password" required /><br /><br />
+  <form method="post" action="/admin/login" class="grid" style="margin-top: 14px;">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
 
-    <button type="submit">Login</button>
+    <div class="field">
+      <label for="username">نام کاربری</label>
+      <input id="username" type="text" name="username" required autocomplete="username" />
+    </div>
+
+    <div class="field">
+      <label for="password">رمز عبور</label>
+      <input id="password" type="password" name="password" required autocomplete="current-password" />
+    </div>
+
+    <button class="btn btn-primary" type="submit">ورود</button>
   </form>
-</body>
-</html>
+{% endblock %}

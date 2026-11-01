@@ -1,3 +1,4 @@
+import re
 from pathlib import Path
 
 import pytest
@@ -46,10 +47,20 @@ def _seed_admin() -> None:
         db.commit()
 
 
+def _extract_csrf_token(html: str) -> str:
+    match = re.search(r'name="csrf_token"\s+value="([^"]+)"', html)
+    assert match is not None
+    return match.group(1)
+
+
 def _login(client: TestClient) -> None:
+    login_page = client.get("/admin/login")
+    assert login_page.status_code == 200
+    csrf_token = _extract_csrf_token(login_page.text)
+
     resp = client.post(
         "/admin/login",
-        data={"username": "admin", "password": "secret"},
+        data={"username": "admin", "password": "secret", "csrf_token": csrf_token},
         follow_redirects=False,
     )
     assert resp.status_code == 303
@@ -188,8 +199,13 @@ def test_admin_delete_request_removes_db_answers_and_files_without_affecting_oth
 
     with TestClient(app) as client:
         _login(client)
+        csrf_token = _extract_csrf_token(client.get(f"/admin/requests/{req1.id}").text)
 
-        resp = client.post(f"/admin/requests/{req1.id}/delete", follow_redirects=False)
+        resp = client.post(
+            f"/admin/requests/{req1.id}/delete",
+            data={"csrf_token": csrf_token},
+            follow_redirects=False,
+        )
         assert resp.status_code == 303
 
     with session_factory() as db:
@@ -368,10 +384,11 @@ def test_admin_messaging_uses_correct_chat_id_and_text_and_handles_errors(tmp_pa
 
     with TestClient(app) as client:
         _login(client)
+        csrf_token = _extract_csrf_token(client.get(f"/admin/requests/{request_id}").text)
 
         resp = client.post(
             f"/admin/requests/{request_id}/message",
-            data={"message_text": "مدارک شما ناقص است. لطفاً درخواست جدیدی ثبت کنید."},
+            data={"message_text": "مدارک شما ناقص است. لطفاً درخواست جدیدی ثبت کنید.", "csrf_token": csrf_token},
             follow_redirects=False,
         )
         assert resp.status_code == 303
@@ -385,9 +402,10 @@ def test_admin_messaging_uses_correct_chat_id_and_text_and_handles_errors(tmp_pa
 
     with TestClient(app) as client:
         _login(client)
+        csrf_token = _extract_csrf_token(client.get(f"/admin/requests/{request_id}").text)
         resp = client.post(
             f"/admin/requests/{request_id}/message",
-            data={"message_text": "hello"},
+            data={"message_text": "hello", "csrf_token": csrf_token},
             follow_redirects=False,
         )
         assert resp.status_code == 303
